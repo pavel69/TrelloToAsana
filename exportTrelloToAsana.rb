@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
- 
-require "rubygems"
+
+require 'fileutils'
+require 'open-uri'
 require 'trello'
 require 'asana'
 require 'yaml'
@@ -75,6 +76,24 @@ boards.each do |board|
     list.cards.reverse.each do |card|
       puts "  - Card #{card.name}, Due on #{card.due}"
 
+      cardDir = Dir.home() + '/trello/' +  card.id
+
+
+
+      card.attachments.each do |att|
+
+        puts "\n=== Attachment #{att.name} #{att.url}"
+
+        FileUtils.mkdir_p( cardDir )
+
+        File.open(cardDir + '/' + att.name, 'wb') do |saved_file|
+          open(att.url, "rb") do |read_file|
+            saved_file.write(read_file.read)
+          end
+        end
+      end
+
+
       # Create the task
       t = Asana::Task.new
       t.name = card.name
@@ -96,9 +115,16 @@ boards.each do |board|
       task.add_project(project.id)
 
       #Stories / Trello comments
-      comments = card.actions.select {|a| a.type == 'commentCard'}
+      comments = card.actions.select {|a| a.type.include? 'CommentCard' }
       comments.each do |c|
-        task.create_story({:text => c.data['text']})
+
+        c
+
+        comment_text = c.data['text']
+
+        puts "\n=== Comment #{comment_text}"
+
+        task.create_story({:text => comment_text }) if !comment_text.nil?
       end
 
       #Subtasks
@@ -110,6 +136,7 @@ boards.each do |board|
           task.create_subtask(st.attributes)
         end
       end
+
 
     end
 
