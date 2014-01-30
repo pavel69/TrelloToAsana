@@ -80,18 +80,18 @@ boards.each do |board|
 
 
 
-      card.attachments.each do |att|
-
-        puts "\n=== Attachment #{att.name} #{att.url}"
-
-        FileUtils.mkdir_p( cardDir )
-
-        File.open(cardDir + '/' + att.name, 'wb') do |saved_file|
-          open(att.url, "rb") do |read_file|
-            saved_file.write(read_file.read)
-          end
-        end
-      end
+      #card.attachments.each do |att|
+      #
+      #  puts "\n=== Attachment #{att.name} #{att.url}"
+      #
+      #  FileUtils.mkdir_p( cardDir )
+      #
+      #  File.open(cardDir + '/' + att.name, 'wb') do |saved_file|
+      #    open(att.url, "rb") do |read_file|
+      #      saved_file.write(read_file.read)
+      #    end
+      #  end
+      #end
 
 
       # Create the task
@@ -118,13 +118,16 @@ boards.each do |board|
       comments = card.actions.select {|a| a.type.include? 'CommentCard' }
       comments.each do |c|
 
-        c
 
-        comment_text = c.data['text']
+        if !c.data['text'].nil? then
+          comment_text = "#{c.member_creator.username} #{c.member_creator.full_name}: #{c.data['text']}"
 
-        puts "\n=== Comment #{comment_text}"
+          puts "\n=== Comment #{comment_text}"
 
-        task.create_story({:text => comment_text }) if !comment_text.nil?
+          task.create_story({:text => comment_text })
+
+        end
+
       end
 
       #Subtasks
