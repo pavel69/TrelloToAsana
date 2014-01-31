@@ -51,19 +51,24 @@ boards = Trello::Board.all
 boards.each do |board|
   next if board.closed?
   
-  puts "\n=== Export Board #{board.name}? [yn]"
-  next unless gets.chomp == 'y' 
+  #puts "\n=== Export Board #{board.name}? [yn]"
+  next unless board.name == 'ouk2'
 
   # Which workspace to put it in
-  workspace = workspaces[get_option_from_list(workspaces, 
-    "Select destination workplace", 
-    "name")]
+  workspace = workspaces[1]
+  #workspace = workspaces[get_option_from_list(workspaces,
+  #  "Select destination workplace",
+  #  "name")]
   puts "Using workspace #{workspace.name}"
 
   # Which project to associate
-  project = workspace.projects[get_option_from_list(workspace.projects, 
-    "Select destination project", 
-    "name")]
+  project = workspace.projects[3]
+
+
+
+  #project = workspace.projects[get_option_from_list(workspace.projects,
+  #  "Select destination project",
+  #  "name")]
   puts " -- Using project #{project.name} --"
 
   puts ' -- Getting users --'
@@ -73,32 +78,20 @@ boards.each do |board|
   
     puts " - #{list.name}:"
 
+    project = workspace.create_project({name: "trello-#{list.name}"})
+    puts " -- Using project #{project.name} --"
+
     list.cards.reverse.each do |card|
       puts "  - Card #{card.name}, Due on #{card.due}"
 
       cardDir = Dir.home() + '/trello/' +  card.id
-
-
-
-      #card.attachments.each do |att|
-      #
-      #  puts "\n=== Attachment #{att.name} #{att.url}"
-      #
-      #  FileUtils.mkdir_p( cardDir )
-      #
-      #  File.open(cardDir + '/' + att.name, 'wb') do |saved_file|
-      #    open(att.url, "rb") do |read_file|
-      #      saved_file.write(read_file.read)
-      #    end
-      #  end
-      #end
-
 
       # Create the task
       t = Asana::Task.new
       t.name = card.name
       t.notes = card.desc
       t.due_on = card.due.to_date if !card.due.nil?
+
 
       # Assignee - Try to find by name. Otherwise will be empty
       t.assignee = nil
@@ -114,18 +107,42 @@ boards.each do |board|
       #Project
       task.add_project(project.id)
 
+      if !card.members.empty? then
+        cm_ = card.members.map { |v| v.full_name }.join(",")
+        task.create_story({:text => "Trello users: #{cm_}"})
+      end
+
       #Stories / Trello comments
       comments = card.actions.select {|a| a.type.include? 'CommentCard' }
       comments.each do |c|
 
+        task.create_story({:text => "#{c.member_creator.full_name}: #{c.data['text']}"}) unless c.data['text'].nil?
 
-        if !c.data['text'].nil? then
-          comment_text = "#{c.member_creator.username} #{c.member_creator.full_name}: #{c.data['text']}"
+      end
 
-          puts "\n=== Comment #{comment_text}"
+      card.attachments.each do |att|
 
-          task.create_story({:text => comment_text })
+        puts "\n=== Attachment #{att.name} #{att.url}"
 
+        FileUtils.mkdir_p( cardDir )
+
+        fn = cardDir + '/' + att.name
+        File.open(fn, 'wb') do |saved_file|
+          open(att.url, "rb") do |read_file|
+            saved_file.write(read_file.read)
+
+            request = RestClient::Request.new(
+                :method => :post,
+                :url => "https://app.asana.com/api/1.0/tasks/#{task.id}/attachments",
+                :user => ASANA_API_KEY,
+                :payload => {
+                    :multipart => true,
+                    :file => File.new(saved_file, 'rb')
+                })
+            response = request.execute
+
+
+          end
         end
 
       end
@@ -148,6 +165,7 @@ boards.each do |board|
       task = workspace.create_task({name: "#{list.name}:", assignee: nil})
       task.add_project(project.id)
     end
+
 
   end
 
