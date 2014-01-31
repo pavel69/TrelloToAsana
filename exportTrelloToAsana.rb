@@ -109,8 +109,6 @@ boards.each do |board|
 
       trello_users = ''
 
-      puts card.actions.inspect
-
       comments = card.actions.select {|a| a.type.include? 'reateCard' }
       trello_users = "TA: #{comments[0].member_creator.full_name}; " unless comments.empty?
 
