@@ -107,13 +107,23 @@ boards.each do |board|
       #Project
       task.add_project(project.id)
 
+      trello_users = ''
+
+      puts card.actions.inspect
+
+      comments = card.actions.select {|a| a.type.include? 'reateCard' }
+      trello_users = "TA: #{comments[0].member_creator.full_name}; " unless comments.empty?
+
+
       if !card.members.empty? then
-        cm_ = card.members.map { |v| v.full_name }.join(",")
-        task.create_story({:text => "Trello users: #{cm_}"})
+        trello_users += 'TM: ' + card.members.map { |v| v.full_name }.join(",")
       end
 
+      task.create_story({:text => trello_users}) unless trello_users.empty?
+
+
       #Stories / Trello comments
-      comments = card.actions.select {|a| a.type.include? 'CommentCard' }
+      comments = card.actions.select {|a| a.type.include? 'ommentCard' }
       comments.each do |c|
 
         task.create_story({:text => "#{c.member_creator.full_name}: #{c.data['text']}"}) unless c.data['text'].nil?
