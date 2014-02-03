@@ -5,10 +5,12 @@ require 'open-uri'
 require 'trello'
 require 'asana'
 require 'yaml'
+require 'pp'
+require 'ap'
 
 cnf = YAML::load(File.open('config.yml'))
 
- 
+
 # Trello keys
 TRELLO_DEVELOPER_PUBLIC_KEY = cnf['trello']['developer_public_key']
 TRELLO_MEMBER_TOKEN = cnf['trello']['member_token']
@@ -16,7 +18,7 @@ TRELLO_MEMBER_TOKEN = cnf['trello']['member_token']
 # Asana keys
 ASANA_API_KEY = cnf['asana']['api_key']
 ASANA_ASSIGNEE = 'me'
- 
+
 
 
 Trello.configure do |config|
@@ -30,20 +32,21 @@ end
 
 workspaces = Asana::Workspace.all
 
-board = Trello::Board.all.select { |b| b.name == 'asana' }
+board = Trello::Board.find { |b| b.name == 'asana' }
 
-workspace = workspaces.select { |w| w.name == 'ОУК' }
+workspace = Asana::Workspace.find { |w| w.name == 'ОУК' }
 
-project = workspace.projects.select { |p| p.name == 'trello' }
+project = workspace.projects.find { |p| p.name == 'trello' }
 
-users = workspace.users
+puts "Migrate Trello board \"#{board.name}\" to Asana wokspace \"#{workspace.name}\", project \"#{project.name}\""
 
-list = board.lists.select { |l| l.name == 'ToDo' }
-list_doing = board.lists.select { |l| l.name == 'Doing' }
+
+list = board.lists.find { |l| l.name == 'ToDo' }
+list_doing = board.lists.find { |l| l.name == 'Doing' }
 
 
 list.cards.reverse.each do |card|
-  puts "  - Card #{card.name}, Due on #{card.due}"
+  puts "  - Card #{card.name}"
 
   cardDir = Dir.home() + '/trello/' +  card.id
 
@@ -52,19 +55,14 @@ list.cards.reverse.each do |card|
   t.name = card.name
   t.notes = card.desc
   t.due_on = card.due.to_date if !card.due.nil?
-
-
-  # Assignee - Try to find by name. Otherwise will be empty
   t.assignee = nil
 
   task = workspace.create_task(t.attributes)
-  
+
   #Project
   task.add_project(project.id)
 
-
-  task.create_story({:text => card.shortUrl}) unless unless card.shortUrl?
-
+  task.create_story({:text => card.url}) unless card.url.nil?
 
   #Stories / Trello comments
   comments = card.actions.select {|a| a.type.include? 'ommentCard' }
@@ -75,8 +73,6 @@ list.cards.reverse.each do |card|
   end
 
   card.attachments.each do |att|
-
-    puts "\n=== Attachment #{att.name} #{att.url}"
 
     FileUtils.mkdir_p( cardDir )
 
@@ -95,7 +91,6 @@ list.cards.reverse.each do |card|
             })
         response = request.execute
 
-
       end
     end
 
@@ -111,5 +106,5 @@ list.cards.reverse.each do |card|
     end
   end
 
-	card.move_to_list(list_doing)
+  card.move_to_list(list_doing)
 end
