@@ -109,7 +109,7 @@ boards.each do |board|
 
       trello_users = ''
 
-      comments = card.actions.select {|a| a.type.include? 'reateCard' }
+      comments = card.actions.select {|a| a.type.downcase.include? 'createcard' }
       trello_users = "TA: #{comments[0].member_creator.full_name}; " unless comments.empty?
 
 
@@ -121,7 +121,7 @@ boards.each do |board|
 
 
       #Stories / Trello comments
-      comments = card.actions.select {|a| a.type.include? 'ommentCard' }
+      comments = card.actions.select {|a| a.type.downcase.include? 'commentcard' }
       comments.each do |c|
 
         task.create_story({:text => "#{c.member_creator.full_name}: #{c.data['text']}"}) unless c.data['text'].nil?

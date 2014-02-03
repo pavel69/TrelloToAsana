@@ -30,7 +30,6 @@ Asana.configure do |client|
   client.api_key = ASANA_API_KEY
 end
 
-workspaces = Asana::Workspace.all
 
 board = Trello::Board.all.find { |b| b.name == 'asana' }
 
