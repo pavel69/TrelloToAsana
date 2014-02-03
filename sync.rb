@@ -36,13 +36,13 @@ board = Trello::Board.all.find { |b| b.name == 'asana' }
 
 workspace = Asana::Workspace.all.find { |w| w.name == 'ОУК' }
 
-project = workspace.projects.all.find { |p| p.name == 'trello' }
+project = workspace.projects.find { |p| p.name == 'trello' }
 
 puts "Migrate Trello board \"#{board.name}\" to Asana wokspace \"#{workspace.name}\", project \"#{project.name}\""
 
 
-list = board.lists.all.find { |l| l.name == 'ToDo' }
-list_doing = board.lists.all.find { |l| l.name == 'Doing' }
+list = board.lists.find { |l| l.name == 'ToDo' }
+list_doing = board.lists.find { |l| l.name == 'Doing' }
 
 
 list.cards.reverse.each do |card|
