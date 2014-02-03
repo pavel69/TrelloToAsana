@@ -40,6 +40,8 @@ users = workspace.users
 
 board.lists.each do |list|
 
+  next if list.name.downcase.include? 'done'
+
   puts " - #{list.name}:"
 
   list.cards.reverse.each do |card|
