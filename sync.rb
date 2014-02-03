@@ -32,7 +32,7 @@ workspaces = Asana::Workspace.all
 
 board = Trello::Board.all.select { |b| b.name == 'asana' }
 
-workspace = workspaces.select { |w| w.name == 'Œ” ' }
+workspace = workspaces.select { |w| w.name == '–û–£–ö' }
 
 project = workspace.projects.select { |p| p.name == 'trello' }
 
