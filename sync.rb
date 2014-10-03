@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+﻿#!/usr/bin/env ruby
 
 require 'fileutils'
 require 'open-uri'
@@ -54,7 +54,6 @@ list.cards.reverse.each do |card|
   t.name = card.name
   t.notes = card.desc
   t.due_on = card.due.to_date if !card.due.nil?
-  t.assignee = nil
 
   task = workspace.create_task(t.attributes)
 
