@@ -74,7 +74,7 @@ list.cards.reverse.each do |card|
 
     FileUtils.mkdir_p( cardDir )
 
-    fn = cardDir + '/' + att.name
+    fn = cardDir + '/' + att.name.gsub(/[\/:]/, '_')
     File.open(fn, 'wb') do |saved_file|
       open(att.url, "rb") do |read_file|
         saved_file.write(read_file.read)
