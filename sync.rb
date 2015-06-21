@@ -26,16 +26,15 @@ Trello.configure do |config|
   config.member_token = TRELLO_MEMBER_TOKEN
 end
 
-Asana.configure do |client|
-  client.api_key = ASANA_API_KEY
+asana = Asana::Client.new do |c|
+  c.authentication :api_token, ASANA_API_KEY
 end
-
 
 board = Trello::Board.all.find { |b| b.name == 'asana' }
 
-workspace = Asana::Workspace.all.find { |w| w.name == 'ОУК' }
+workspace = asana.workspaces.find_all.find { |w| w.name == 'ОУК' }
 
-project = workspace.projects.find { |p| p.name == 'trello' }
+project = asana.projects.find_all(workspace: workspace.id).find { |p| p.name == 'trello' }
 
 puts "Migrate Trello board \"#{board.name}\" to Asana wokspace \"#{workspace.name}\", project \"#{project.name}\""
 
@@ -45,55 +44,60 @@ list_doing = board.lists.find { |l| l.name == 'Doing' }
 
 
 list.cards.reverse.each do |card|
+
   puts "  - Card #{card.name}"
 
   cardDir = Dir.home() + '/trello/' +  card.id
 
   # Create the task
-  t = Asana::Task.new
-  t.name = card.name
-  t.notes = card.desc
-  t.due_on = card.due.to_date if !card.due.nil?
+#  t = Asana::Task.new
+#  t.name = card.name
+#  t.notes = card.desc
+#  t.due_on = card.due.to_date if !card.due.nil?
 
-  task = workspace.create_task(t.attributes)
+  task = asana.tasks.create({ name: card.name, notes: card.desc, projects: [ project.id ], workspace: workspace.id})
 
-  #Project
-  task.add_project(project.id)
-
-  task.create_story({:text => card.url}) unless card.url.nil?
+  asana.stories.create_on_task(task: task.id, text: card.url) unless card.url.nil?
 
   #Stories / Trello comments
   comments = card.actions.select {|a| a.type.include? 'ommentCard' }
+
   comments.each do |c|
-
-    task.create_story({:text => "#{c.member_creator.full_name}: #{c.data['text']}"}) unless c.data['text'].nil?
-
+    asana.stories.create_on_task(task: task.id, text: "#{c.member_creator.full_name}: #{c.data['text']}") unless c.data['text'].nil?
   end
 
   card.attachments.each do |att|
 
-    FileUtils.mkdir_p( cardDir )
+    if att.is_upload
 
-    fn = cardDir + '/' + att.name.gsub(/[\/:]/, '_')
-    File.open(fn, 'wb') do |saved_file|
-      open(att.url, "rb") do |read_file|
-        saved_file.write(read_file.read)
+      FileUtils.mkdir_p( cardDir )
 
-        request = RestClient::Request.new(
-            :method => :post,
-            :url => "https://app.asana.com/api/1.0/tasks/#{task.id}/attachments",
-            :user => ASANA_API_KEY,
-            :payload => {
-                :multipart => true,
-                :file => File.new(saved_file, 'rb')
-            })
-        response = request.execute
+      fn = cardDir + '/' + att.name.gsub(/[\/:]/, '_')
 
+      File.open(fn, 'wb') do |saved_file|
+        open(att.url, 'rb') do |read_file|
+          saved_file.write(read_file.read)
+
+          request = RestClient::Request.new(
+              :method => :post,
+              :url => "https://app.asana.com/api/1.0/tasks/#{task.id}/attachments",
+              :user => ASANA_API_KEY,
+              :payload => {
+                  :multipart => true,
+                  :file => File.new(saved_file, 'rb')
+              })
+          response = request.execute
+
+        end
       end
+
+    else
+      asana.stories.create_on_task(task: task.id, text: att.url) unless att.url.nil?
     end
 
   end
 
+=begin
   #Subtasks
   card.checklists.each do |checklist|
     checklist.check_items.each do |checkItem|
@@ -103,6 +107,7 @@ list.cards.reverse.each do |card|
       task.create_subtask(st.attributes)
     end
   end
+=end
 
   card.move_to_list(list_doing)
 end
